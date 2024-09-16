@@ -2,7 +2,7 @@ mod handlers;
 mod models;
 mod router;
 
-use crate::handlers::{add, multiply, subtract}; // Keep the imports
+use crate::handlers::{add, multiply, subtract, divide};
 use crate::models::Route;
 use crate::router::Router;
 
@@ -35,6 +35,11 @@ async fn main() {
   function_registry.insert(
     "multiply".to_string(),
     Arc::new(|req| multiply(req)), // Use the imported function directly
+  );
+
+  function_registry.insert(
+    "divide".to_string(),
+    Arc::new(|req| divide(req)), // Use the imported function directly
   );
 
   // Initialize the router
