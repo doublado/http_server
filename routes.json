@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/add",
+    "function": "add"
+  },
+  {
+    "path": "/subtract",
+    "function": "subtract"
+  },
+  {
+    "path": "/multiply",
+    "function": "multiply"
+  }
+]
