@@ -16,77 +16,83 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
-  // Load routes from configuration file
-  let routes = load_routes("routes.json");
+    // Indlæser ruter fra konfigurationsfilen
+    let routes = load_routes("routes.json");
 
-  // Initialize the function registry
-  let mut function_registry: HashMap<String, router::Handler> = HashMap::new();
+    // Initialiserer funktionsregistret
+    let mut function_registry: HashMap<String, router::Handler> = HashMap::new();
 
-  function_registry.insert(
-    "add".to_string(),
-    Arc::new(|req| add(req)), // Use the imported function directly
-  );
+    // Registrerer 'add' funktionen
+    function_registry.insert(
+        "add".to_string(),
+        Arc::new(|req| add(req)),
+    );
 
-  function_registry.insert(
-    "subtract".to_string(),
-    Arc::new(|req| subtract(req)), // Use the imported function directly
-  );
+    // Registrerer 'subtract' funktionen
+    function_registry.insert(
+        "subtract".to_string(),
+        Arc::new(|req| subtract(req)),
+    );
 
-  function_registry.insert(
-    "multiply".to_string(),
-    Arc::new(|req| multiply(req)), // Use the imported function directly
-  );
+    // Registrerer 'multiply' funktionen
+    function_registry.insert(
+        "multiply".to_string(),
+        Arc::new(|req| multiply(req)),
+    );
 
-  function_registry.insert(
-    "divide".to_string(),
-    Arc::new(|req| divide(req)), // Use the imported function directly
-  );
+    // Registrerer 'divide' funktionen
+    function_registry.insert(
+        "divide".to_string(),
+        Arc::new(|req| divide(req)),
+    );
 
-  // Initialize the router
-  let mut router = Router::new();
+    // Initialiserer routeren
+    let mut router = Router::new();
 
-  for route in routes {
-    if let Some(handler) = function_registry.get(&route.function) {
-      router.add_route(route.path.clone(), handler.clone());
-      println!("Added route: {} -> {}", route.path, route.function);
-    } else {
-      eprintln!(
-        "Handler function '{}' not found for path '{}'",
-        route.function, route.path
-      );
+    // Tilføjer ruter til routeren baseret på konfigurationen
+    for route in routes {
+        if let Some(handler) = function_registry.get(&route.function) {
+            router.add_route(route.path.clone(), handler.clone());
+            println!("Tilføjede rute: {} -> {}", route.path, route.function);
+        } else {
+            eprintln!(
+                "Handler funktion '{}' ikke fundet for sti '{}'",
+                route.function, route.path
+            );
+        }
     }
-  }
 
-  let router = Arc::new(router);
+    // Gør routeren trådsikker ved at pakke den i en Arc
+    let router = Arc::new(router);
 
-  // Set the address to serve on
-  let addr = ([127, 0, 0, 1], 3000).into();
+    // Sætter adressen, serveren skal lytte på
+    let addr = ([127, 0, 0, 1], 3000).into();
 
-  // Create a service that handles incoming requests
-  let make_svc = make_service_fn(move |_conn| {
-    let router = router.clone();
-    async move {
-      Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
+    // Opretter en service, der håndterer indgående forespørgsler
+    let make_svc = make_service_fn(move |_conn| {
         let router = router.clone();
-        async move { router.route(req).await }
-      }))
+        async move {
+            Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
+                let router = router.clone();
+                async move { router.route(req).await }
+            }))
+        }
+    });
+
+    // Opretter og starter serveren
+    let server = Server::bind(&addr).serve(make_svc);
+
+    println!("Lytter på http://{}", addr);
+
+    // Kører serveren
+    if let Err(e) = server.await {
+        eprintln!("Server fejl: {}", e);
     }
-  });
-
-  // Create the server
-  let server = Server::bind(&addr).serve(make_svc);
-
-  println!("Listening on http://{}", addr);
-
-  // Run the server
-  if let Err(e) = server.await {
-    eprintln!("Server error: {}", e);
-  }
 }
 
-// Function to load routes from the configuration file
+// Funktion til at indlæse ruter fra konfigurationsfilen
 fn load_routes(file_path: &str) -> Vec<Route> {
-  let file = File::open(file_path).expect("Cannot open routes file");
-  let reader = BufReader::new(file);
-  serde_json::from_reader(reader).expect("Error parsing routes file")
+    let file = File::open(file_path).expect("Kan ikke åbne rute-filen");
+    let reader = BufReader::new(file);
+    serde_json::from_reader(reader).expect("Fejl ved parsing af rute-filen")
 }
